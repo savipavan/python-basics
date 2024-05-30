@@ -1,4 +1,2 @@
-running
-skipping
-walking
-Playing cricket
+runwalking
+Play
