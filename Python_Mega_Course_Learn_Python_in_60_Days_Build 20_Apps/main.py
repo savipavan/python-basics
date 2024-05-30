@@ -1,7 +1,6 @@
-user_prompt = "Enter a todo: "
-todo1 = input(user_prompt)
-todo2 = input(user_prompt)
-todo3 = input(user_prompt)
+countries = []
 
-todos = [todo1, todo2, todo3]
-print(todos)
+while True:
+    country = input("Enter the country: ")
+    countries.append(country)
+    print(countries)
