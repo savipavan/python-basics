@@ -45,3 +45,14 @@ reduce() applies given logic on each item on collection and returns a single cal
 
 # tell() and seek()
 
+How to write CSV data
+
+# Try, except and finally
+
+![img.png](img.png)
+
+# we can raise custom exception
+by using 'raise' keyword
+
+# Object oriented language
+
