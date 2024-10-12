@@ -1,0 +1,201 @@
+#################quick_server.py
+#Execute by
+#python quick_server.py
+from flask import Flask
+
+#https://flask.palletsprojects.com/en/2.0.x/api/
+app = Flask(__name__)
+
+
+#URL end => function , by defualt, Flask uses 200 OK, text/html
+#flask uses all methods - GET,....
+
+@app.route("/", methods=['GET'])  # http://localhost:5000/
+def home():
+    return  """
+    <html>
+    <head><title>MyWebserevr</title>
+    <style>
+    .some {
+        color: red;
+    }
+    </style></head>
+    <body>
+    <h1 id="some" class="some">Hello there!</h1>
+    <h1 id="some2">hello again!!</h1>
+    </body>
+    </html>
+    """
+
+"""
+GET Params
+    URL params
+        http://localhost:5000/helloj?name=das&format=json
+        Use request.args
+    PATH params
+        http://localhost:5000/helloj/das/json
+
+POST params
+    body params, set Content-Type = application/json
+    sned json string in body
+        request.json() to parse
+
+"""
+"""
+helloj  takes and return age from db
+"""
+from flask import request , jsonify, Response
+
+@app.route("/helloj", methods=["GET"]) #http://localhost:5000/helloj?name=das&format=json
+@app.route("/helloj/<string:name>/<string:format>", methods=['GET'])#http://localhost:5000/helloj/das/json
+@app.route("/helloj/<string:name>", methods=['GET']) #http://localhost:5000/helloj/das
+def helloj(name="abc", format="json"): #PATH params , flask sends value of name and format here
+    db = [dict(name="das",age=40), dict(name="abc", age=35)]
+    #Parse URL params
+    fname = request.args.get("name", name)  # requst.args is dict , get(key, default_value)
+    fformat = request.args.get("format", format)
+    age = None
+    for e in db:
+        if e['name'].lower() == fname.lower():
+            age = e['age']
+    #Response
+    if fformat.lower() == "json":
+        if age is not None:
+            #success
+            obj = dict(name=fname, age=age)
+            status_code = 200
+        else:
+            #failure
+            obj = dict(name=fname, details="Not found")
+            status_code = 500
+        resp = jsonify(obj)  # sets COntent-Type as json and converts to json string
+        resp.status_code = status_code
+        return resp
+    elif fformat.lower() == "xml":
+        if age is not None:
+            data = f"""<?xml version="1.0"?>
+            <data><name>{fname}</name><age>{age}</age>
+            </data>"""
+            resp = Response(response=data, status=200,
+                mimetype="application/xml")
+            return resp
+        else:
+            return "TODO1"
+    else:
+        return "TODO2"
+
+if __name__ == '__main__':
+    #http://localhost:5000
+    #run(host=None, port=None, debug=None, load_dotenv=True, **option
+    app.run()
+    #host, port, security - deployment topics
+
+"""
+url1 = "http://localhost:5000/helloj?name=das&format=json"
+url2 = "http://localhost:5000/helloj/das/json"
+import requests
+resp = requests.get(url1)
+resp.json()
+resp = requests.get(url2)
+resp.json()
+url3 = "http://localhost:5000/helloj/dass"
+resp = requests.get(url3)
+resp.json()
+url3 = "http://localhost:5000/helloj/das/xml"
+resp = requests.get(url3)
+print(resp.status_code)
+import xml.etree.ElementTree as ET
+root = ET.fromstring(resp.text)
+print(root.tag)
+
+"""
+######################PACKAGING
+STEP1: CREATE below
+poetry new flaskr
+cd flaskr
+
+
+
+#ONLy for Office PC
+Given index-url = https://<<SERVER>>/artifactory/api/pypi/<<LOCATION>>/simple/
+pip config list
+
+poetry source add --priority=default ourpypi index-url
+poetry source add --priority=supplemental PyPI
+
+#where venv to be created
+poetry config virtualenvs.in-project true
+
+#STEP1.1
+poetry add flask gevent
+
+Copy static, templates and quick_server.py inside flaskr\flaskr
+
+STEP2: UPDATE
+#flaskr\flaskr\__init__.py
+from flask import Flask
+app = Flask(__name__)
+from . import quick_server
+#Update flaskr\flaskr\quick_server.py
+#app = Flask(__name__)  #comment this line
+from flaskr import app
+
+STEP3: TEST
+poetry env info
+poetry shell
+set FLASK_APP=flaskr
+flask run   # run whatever set in FLASK_APP
+
+STEP4:
+exit
+poetry build -v
+#You can find the file in dist/flaskr-0.1.0-py3-none-any.whl
+
+FURTHER TEST
+cd ..
+python -m venv .\env
+.\env\Scripts\activate
+pip install flaskr/dist/flaskr-0.1.0-py3-none-any.whl
+set FLASK_APP=flaskr
+flask run
+
+
+Install
+$ pip install --force-reinstall --no-dependencies dist/flaskr-0.1.0-py3-none-any.whl
+
+STEP4:
+##Deployment
+#https://flask.palletsprojects.com/en/1.1.x/deploying/wsgi-standalone/
+
+# For example to deploy via  Gevent
+pip install gevent
+#Gevent is a coroutine-based Python networking library
+#that uses greenlet to provide a high-level synchronous API on top of libev event loop:
+
+#Execute by 'python gevent_server.py'
+#gevent_server.py
+from gevent.pywsgi import WSGIServer
+from flaskr import app
+
+# http_server = WSGIServer(('localhost', 443), app, keyfile='key.pem', certfile='cert.pem')
+http_server = WSGIServer(('localhost', 8080), app)
+http_server.serve_forever()
+
+##To generate self signed certificate
+Note cert.pem may have public ip or localhost
+But whatever it has , must be the same as given in above 'http_server'
+
+import requests
+r = requests.get("https://localhost/helloj?name=das&format=json", verify=False)
+r = requests.get("https://localhost/helloj?name=das&format=json", verify="./cert.pem")
+
+#Create - instead of localhost, gives public IP
+#-nodes (short for no DES) for no  passphrase(else min 4 character passphrase)
+(check by 'where openssl.exe' )
+$ openssl req -x509 -subj '/CN=localhost' -nodes -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365
+
+
+Note for subjectAltName error
+Check
+https://gist.github.com/KeithYeh/bb07cadd23645a6a62509b1ec8986bbc
+https://serverfault.com/questions/845766/generating-a-self-signed-cert-with-openssl-that-works-in-chrome-58
